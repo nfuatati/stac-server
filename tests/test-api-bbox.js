@@ -1,4 +1,4 @@
-const test = require('ava')
+const { default: test } = require('ava')
 const api = require('../libs/api')
 
 test('extractBboxNull', (t) => {

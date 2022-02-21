@@ -1,4 +1,4 @@
-const test = require('ava')
+const { default: test } = require('ava')
 const es = require('../libs/es')
 
 test('search id parameter doesnt override other parameters', async (t) => {

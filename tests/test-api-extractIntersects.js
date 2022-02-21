@@ -1,4 +1,4 @@
-const test = require('ava')
+const { default: test } = require('ava')
 const sinon = require('sinon')
 const proxyquire = require('proxyquire')
 const api = require('../libs/api')

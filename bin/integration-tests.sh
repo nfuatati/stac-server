@@ -30,7 +30,7 @@ SERVERLESS_PID="$!"
 
 echo "Running tests"
 set +e
-npx ava ./tests/integration/test_*.js
+npx ava ./tests/integration/api/test-*.js
 TEST_RESULT="$?"
 set -e
 

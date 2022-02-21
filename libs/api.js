@@ -4,7 +4,6 @@ const yaml = require('js-yaml')
 const fs = require('fs')
 const logger = console
 const path = require('path')
-const httpMethods = require('../utils/http-methods')
 
 // max number of collections to retrieve
 const COLLECTION_LIMIT = process.env.STAC_SERVER_COLLECTION_LIMIT || 100
@@ -165,41 +164,6 @@ const extractCollectionIds = function (params) {
     }
   }
   return idsRules
-}
-
-const parsePath = function (inpath) {
-  const searchFilters = {
-    root: false,
-    api: false,
-    conformance: false,
-    collections: false,
-    search: false,
-    collectionId: false,
-    items: false,
-    itemId: false,
-    edit: false
-  }
-  const api = 'api'
-  const conformance = 'conformance'
-  const collections = 'collections'
-  const search = 'search'
-  const items = 'items'
-  const edit = 'edit'
-
-  const pathComponents = inpath.split('/').filter((x) => x)
-  const { length } = pathComponents
-  searchFilters.root = length === 0
-  searchFilters.api = pathComponents[0] === api
-  searchFilters.conformance = pathComponents[0] === conformance
-  searchFilters.collections = pathComponents[0] === collections
-
-  searchFilters.collectionId = pathComponents[0] === collections && length >= 2
-    ? pathComponents[1] : false
-  searchFilters.search = pathComponents[0] === search
-  searchFilters.items = pathComponents[2] === items
-  searchFilters.itemId = pathComponents[2] === items && length >= 4 ? pathComponents[3] : false
-  searchFilters.edit = pathComponents[4] === edit
-  return searchFilters
 }
 
 // Impure - mutates results
@@ -498,6 +462,9 @@ const getCollections = async function (backend, endpoint = '') {
 
 const getCollection = async function (collectionId, backend, endpoint = '') {
   const result = await backend.getCollection(collectionId)
+
+  if (result === undefined) return new Error('Collection not found')
+
   const col = addCollectionLinks([result], endpoint)
   if (col.length > 0) {
     return col[0]
@@ -524,89 +491,6 @@ const editPartialItem = async function (itemId, queryParameters, backend, endpoi
   return new Error(`Error editing item ${itemId}`)
 }
 
-const API = async function (
-  // eslint-disable-next-line default-param-last
-  inpath = '', queryParameters = {}, backend, endpoint = '', httpMethod = 'GET'
-) {
-  logger.debug(`API Path: ${inpath}, Query Parameters: ${JSON.stringify(queryParameters)}`)
-  let apiResponse
-  try {
-    if (httpMethod === 'GET') {
-      // Lets attempt to HTML entity decode values if they have been passed from GET
-      Object.keys(queryParameters).forEach((key) => {
-        if (queryParameters[key][0] === '%') {
-          queryParameters[key] = decodeURIComponent(queryParameters[key])
-        }
-      })
-    }
-
-    const pathElements = parsePath(inpath)
-
-    const {
-      root,
-      api,
-      conformance,
-      search: searchPath,
-      collections,
-      collectionId,
-      items,
-      itemId
-    } = pathElements
-
-    // API Root
-    if (root) {
-      apiResponse = await getCatalog(backend, endpoint)
-    }
-    // API Definition
-    if (api) {
-      apiResponse = await getAPI()
-    }
-    // Conformance
-    if (conformance) {
-      apiResponse = await getConformance()
-    }
-    // STAC Search
-    if (searchPath) {
-      apiResponse = await searchItems(
-        null, queryParameters, backend, endpoint, httpMethod
-      )
-    }
-    // Search
-
-    // All collections
-    if (collections && !collectionId) {
-      apiResponse = await getCollections(backend, endpoint)
-    }
-    // Specific collection
-    if (collections && collectionId && !items) {
-      apiResponse = await getCollection(collectionId, backend, endpoint)
-    }
-    // Items in a collection
-    if (collections && collectionId && items && !itemId) {
-      apiResponse = await searchItems(collectionId, queryParameters, backend, endpoint, httpMethod)
-    }
-
-    // Specific item
-    const pathIsToSpecificItem = (collections && collectionId && items && itemId)
-
-    if (pathIsToSpecificItem) {
-      if (httpMethod === httpMethods.GET) {
-        apiResponse = await getItem(collectionId, itemId, backend, endpoint)
-      } else if (httpMethod === httpMethods.PATCH && process.env.ENABLE_TRANSACTIONS_EXTENSION) {
-        // Right now this is the only Transaction extension we support.
-        // https://github.com/radiantearth/stac-api-spec/tree/master/extensions/transaction
-        // When we do more, let's make a more scalable check and not look
-        // for ENABLE_TRANSACTIONS_EXTENSION each time
-        apiResponse = await editPartialItem(itemId, queryParameters, backend, endpoint)
-      }
-    }
-  } catch (error) {
-    logger.error(error)
-    apiResponse = new Error(error.message)
-  }
-  return apiResponse
-}
-
 module.exports = {
   getAPI,
   getConformance,
@@ -615,8 +499,7 @@ module.exports = {
   getCollection,
   getItem,
   searchItems,
-  API,
-  parsePath,
   extractIntersects,
-  extractBbox
+  extractBbox,
+  editPartialItem
 }

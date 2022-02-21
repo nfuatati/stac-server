@@ -257,9 +257,9 @@ async function getCollection(collectionId) {
     index: COLLECTIONS_INDEX,
     body: buildIdQuery(collectionId)
   })
-  // TODO: handle zero hits, _source is undefined
-  const result = response.body.hits.hits[0]._source
-  return result
+
+  const [hit] = response.body.hits.hits
+  return hit ? hit._source : undefined
 }
 
 // get all collections
