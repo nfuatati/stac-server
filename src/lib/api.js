@@ -649,6 +649,8 @@ const partialUpdateItem = async function (
 }
 
 const createItem = async function (item, backend) {
+  logger.debug(`Adding item ${JSON.stringify(item)}`)
+  logger.debug(`Backend ${JSON.stringify(backend)}`)
   const response = await backend.indexItem(item)
   logger.debug(`Create Item: ${JSON.stringify(response)}`)
 
