@@ -46,10 +46,12 @@ functions:
           method: ANY
           path: "/"
           cors: true
+          authorizer: aws_iam
       - http:
           method: ANY
           path: "{proxy+}"
           cors: true
+          authorizer: aws_iam
   ingest:
     description: stac-server Ingest Lambda
     handler: index.handler
